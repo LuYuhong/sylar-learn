@@ -5,6 +5,8 @@
 #include <stdint.h>
 #include <memory>
 #include <list>
+#include <stringstreams>
+#include <fasteam>
 
 namespace sylar{
 
@@ -41,9 +43,13 @@ public:
 	typedef std::shared_ptr<LogEvent> ptr;
 	virtual ~LogAppender(){}
 
-	void log(LogLevel::Level level, LogEvent::ptr event);
+	virtual void log(LogLevel::Level level, LogEvent::ptr event) = 0;
+	
+	void setFormatter(LogFormatter::ptr val) { m_formatter = val;}
+	LogFormatter::ptr getFormatter() const { return m_formatter; }
 private:
 	LogLevel::Level m_level;
+	LogFrmatter::ptr m_formatter;
 };
 
 //日志格式器
@@ -53,6 +59,9 @@ public:
 
 	std::string format(LogEvent::ptr event);
 private:
+
+protected:
+	LogLevel::Level m_level;
 };
 
 class Logger {
@@ -79,11 +88,20 @@ private:
 };
 // 输出到控制台
 class StdoutLogAppender : public LogAppender {
-	
+	typedef std::shared_ptr<StdoutLogAppender> ptr;
+	void log(LogLevel::Level level, LogEvent::ptr event) overide;
 };
 // 输出到文件
 class FileLogAppender : public LogAppender {
-	
+public:	
+	typedef std::shared_ptr<FileLogAppender> ptr;
+	FileLogAppender(const std::string& filename);
+	void log(LogLevel::Level level, LogEvent::ptr event) overide;
+
+	void reopen();
+private:
+	std::string m_name;
+	std::ofstream m_filestream;
 };
 
 

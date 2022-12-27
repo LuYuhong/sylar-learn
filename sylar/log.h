@@ -10,11 +10,19 @@
 
 namespace sylar{
 
+class Logger;
 //日志事件
 class LogEvent {
 public:
 	typedef std::shared_ptr<LogEvent> ptr;
 	LogEvent();
+
+	const char* getfile() const{ return m_file;}
+	int32_t getLine() const { return m_line;}
+	uint32_t getElapse() const { return m_elapse;}
+	uint32_t getThreadId() const { return m_fiberId;}
+	uint32_t getTime() const { return m_time};
+	const std::string& getContent() const { return m_content;}
 private:
 	const char* m_file = nullptr;	//文件名
 	int32_t m_threadId = 0;			//行号
@@ -29,12 +37,15 @@ private:
 class LogLevel {
 public:	
 	enum {
+		UNKNOW = 0,
 		DEBUG = 1,
 		INFO = 2,
 		WARN = 3,
 		ERROR = 4,
 		FATAL = 5
 	};
+
+	static const char* ToString(LogLevel::Level level);
 };
 
 //日志输出地
@@ -43,7 +54,7 @@ public:
 	typedef std::shared_ptr<LogEvent> ptr;
 	virtual ~LogAppender(){}
 
-	virtual void log(LogLevel::Level level, LogEvent::ptr event) = 0;
+	virtual void log(std::shared_ptr<Logger> logger, LogLevel::Level level, LogEvent::ptr event) = 0;
 	
 	void setFormatter(LogFormatter::ptr val) { m_formatter = val;}
 	LogFormatter::ptr getFormatter() const { return m_formatter; }
@@ -56,9 +67,22 @@ private:
 class LogFormatter {
 public:	
 	typedef std::shared_ptr<LogEvent> ptr;
+	LogFormatter(const std::string& pattern);
 
-	std::string format(LogEvent::ptr event);
+	std::string format(std::shared_ptr<Logger> logger, LogLevel::Level level, LogEvent::ptr event);
 private:
+	class FormatItem {
+	public: 
+		typedef std::shared_ptr<FormatItem> ptr;
+		FormatItem(const std::string& fmt = "") {};
+		virtual ~FormatItem() {}
+		virtual void std::string format(std::ostream& os, shared_ptr<Logger> logger, LogLevel::Level level, LogEvent::ptr event) = 0;
+	};
+	void init();
+
+private:
+	std::string m_pattern;
+	std::vector<FormatItem::ptr> m_item;
 
 protected:
 	LogLevel::Level m_level;
@@ -80,7 +104,8 @@ public:
 	void delAppender(LogAppender::ptr appender);
 	LogLevel::Level getLevel() const { return m_level;}
 	void setLevel(LogLevel::Level val) { m_level = val;}
-
+	
+	const std::string& getName() const { return m_name};
 private:
 	std::string m_name;
 	LogLevel::Level m_level;
